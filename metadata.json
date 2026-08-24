@@ -1,0 +1,7 @@
+{
+  "name": "MAKEITHUP",
+  "description": "Minimalist product rating app with personalized recommendations and historical price tracking charts across makeup, skincare, kitchen, and homewares.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
