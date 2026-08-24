@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { ProductItem, PricePoint } from '../types';
+import { ProductItem, PricePoint, RetailerLink, ProductTutorial } from '../types';
 import { CATEGORY_METRIC_LABELS } from '../data/initialProducts';
 import { PriceHistoryChart } from './PriceHistoryChart';
+import { RetailerLinksSection } from './RetailerLinksSection';
+import { TutorialCard } from './TutorialCard';
 import { 
   X, 
   Star, 
@@ -18,8 +20,21 @@ import {
   Copy,
   CheckCheck,
   Sparkles,
-  TrendingDown
+  TrendingDown,
+  Store,
+  Globe,
+  ExternalLink,
+  ShieldCheck,
+  MapPin,
+  Barcode,
+  Share2,
+  Video,
+  Play,
+  Film,
+  Plus,
+  Image as ImageIcon
 } from 'lucide-react';
+import { extractDomainFromUrl, MAJOR_RETAILERS } from '../utils/retailerData';
 
 interface ProductDetailModalProps {
   product: ProductItem | null;
@@ -30,6 +45,13 @@ interface ProductDetailModalProps {
   onUpdateScore: (productId: string, newScore: number) => void;
   onAddPricePoint?: (productId: string, pricePoint: PricePoint) => void;
   onDeletePricePoint?: (productId: string, pointIndex: number) => void;
+  onAddRetailerLink?: (productId: string, link: RetailerLink) => void;
+  onOpenShareDurability?: (product: ProductItem) => void;
+  tutorials?: ProductTutorial[];
+  onOpenTutorial?: (tutorial: ProductTutorial) => void;
+  onCreateTutorialForProduct?: (product: ProductItem) => void;
+  onToggleLikeTutorial?: (tutorialId: string) => void;
+  onToggleSaveTutorial?: (tutorialId: string) => void;
 }
 
 export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
@@ -40,12 +62,21 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   onToggleFavorite,
   onUpdateScore,
   onAddPricePoint,
-  onDeletePricePoint
+  onDeletePricePoint,
+  onAddRetailerLink,
+  onOpenShareDurability,
+  tutorials = [],
+  onOpenTutorial,
+  onCreateTutorialForProduct,
+  onToggleLikeTutorial,
+  onToggleSaveTutorial
 }) => {
   const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<'review' | 'price_history'>('review');
+  const [activeTab, setActiveTab] = useState<'review' | 'durability' | 'tutorials' | 'retailers' | 'price_history'>('review');
 
   if (!product) return null;
+
+  const productTutorials = tutorials.filter(t => t.productId === product.id || t.productName.toLowerCase() === product.name.toLowerCase());
 
   const categoryLabels = CATEGORY_METRIC_LABELS[product.category] || CATEGORY_METRIC_LABELS.homewares;
 
@@ -94,6 +125,18 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
     );
   };
 
+  const primaryRetailerInfo = product.primaryRetailer && MAJOR_RETAILERS[product.primaryRetailer as keyof typeof MAJOR_RETAILERS];
+  const sourceDomain = product.sourceUrl ? extractDomainFromUrl(product.sourceUrl) : primaryRetailerInfo?.domain;
+
+  const durability = product.durabilityProfile || {
+    durabilityScore: 4.8,
+    expectedLifespan: 'Multi-Year Durability',
+    materialComposition: 'Commercial Grade Materials & Formulation',
+    maintenanceTips: 'Store in dry conditions and follow standard care instructions.',
+    wearResistance: 'High' as const,
+    testedUsage: 'Verified durability ratings logged on shelf.'
+  };
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-[#180B26]/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-6">
       <div 
@@ -102,7 +145,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
       >
         {/* Modal Header Bar */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-purple-100 bg-purple-50/70">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-2xs font-bold uppercase tracking-wider bg-purple-900 text-white px-2.5 py-1 rounded-full">
               {product.category}
             </span>
@@ -111,9 +154,40 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 • {product.subCategory}
               </span>
             )}
+            {product.barcode && (
+              <span className="inline-flex items-center gap-1 text-3xs font-mono bg-white text-slate-700 px-2 py-0.5 rounded-full border border-purple-200">
+                <Barcode className="w-3 h-3 text-slate-500" />
+                {product.barcode}
+              </span>
+            )}
+            {product.sourceUrl && (
+              <a
+                href={product.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-2xs bg-white text-purple-800 font-semibold px-2 py-0.5 rounded-full border border-purple-200 hover:bg-purple-100 transition-colors"
+                title={`View on ${sourceDomain}`}
+              >
+                <Globe className="w-3 h-3 text-purple-600" />
+                <span className="truncate max-w-[120px]">{sourceDomain}</span>
+                <ExternalLink className="w-2.5 h-2.5 text-purple-400" />
+              </a>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
+            {onOpenShareDurability && (
+              <button
+                id="detail-share-durability-btn"
+                onClick={() => onOpenShareDurability(product)}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-pink-200 bg-pink-50 hover:bg-pink-100 text-pink-700 font-bold text-xs transition-colors shadow-2xs"
+                title="Share Durability Report"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Share Durability</span>
+              </button>
+            )}
+
             <button
               id="detail-fav-btn"
               onClick={() => onToggleFavorite(product.id)}
@@ -149,12 +223,12 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           </div>
         </div>
 
-        {/* Navigation Subtabs (Review Details vs Historical Price Tracking) */}
-        <div className="flex items-center px-6 pt-3 border-b border-purple-100/80 bg-white gap-4">
+        {/* Navigation Subtabs */}
+        <div className="flex items-center px-6 pt-3 border-b border-purple-100/80 bg-white gap-4 overflow-x-auto">
           <button
             id="detail-tab-review-btn"
             onClick={() => setActiveTab('review')}
-            className={`pb-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 ${
+            className={`pb-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 shrink-0 ${
               activeTab === 'review'
                 ? 'border-purple-900 text-purple-950'
                 : 'border-transparent text-slate-400 hover:text-purple-700'
@@ -164,16 +238,58 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           </button>
 
           <button
+            id="detail-tab-tutorials-btn"
+            onClick={() => setActiveTab('tutorials')}
+            className={`pb-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 shrink-0 ${
+              activeTab === 'tutorials'
+                ? 'border-pink-600 text-pink-700 font-extrabold'
+                : 'border-transparent text-slate-400 hover:text-purple-700'
+            }`}
+          >
+            <Video className="w-3.5 h-3.5 text-pink-600" />
+            <span>Tutorials & In-Use ({productTutorials.length})</span>
+          </button>
+
+          <button
+            id="detail-tab-durability-btn"
+            onClick={() => setActiveTab('durability')}
+            className={`pb-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 shrink-0 ${
+              activeTab === 'durability'
+                ? 'border-pink-600 text-pink-700 font-extrabold'
+                : 'border-transparent text-slate-400 hover:text-purple-700'
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-pink-600" />
+            <span>Durability & Store Aisles</span>
+            <span className="text-2xs bg-pink-100 text-pink-800 px-1.5 py-0.2 rounded-full font-bold">
+              {durability.durabilityScore.toFixed(1)}/5
+            </span>
+          </button>
+
+          <button
+            id="detail-tab-retailers-btn"
+            onClick={() => setActiveTab('retailers')}
+            className={`pb-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 shrink-0 ${
+              activeTab === 'retailers'
+                ? 'border-purple-600 text-purple-900 font-extrabold'
+                : 'border-transparent text-slate-400 hover:text-purple-700'
+            }`}
+          >
+            <Store className="w-3.5 h-3.5 text-purple-600" />
+            <span>Retailers & Online Links</span>
+          </button>
+
+          <button
             id="detail-tab-price-btn"
             onClick={() => setActiveTab('price_history')}
-            className={`pb-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 ${
+            className={`pb-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 shrink-0 ${
               activeTab === 'price_history'
                 ? 'border-pink-500 text-pink-600'
                 : 'border-transparent text-slate-400 hover:text-purple-700'
             }`}
           >
             <TrendingDown className="w-3.5 h-3.5" />
-            <span>Price History Chart</span>
+            <span>Price History</span>
             {product.priceHistory && product.priceHistory.length > 0 && (
               <span className="text-2xs bg-pink-100 text-pink-700 px-1.5 py-0.2 rounded-full font-bold">
                 {product.priceHistory.length}
@@ -235,6 +351,12 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   <Calendar className="w-4 h-4 text-purple-500" />
                   <span>Rated on: <strong>{product.dateRated}</strong></span>
                 </div>
+                {product.barcode && (
+                  <div className="flex items-center gap-1.5 font-medium text-purple-800">
+                    <Barcode className="w-4 h-4 text-purple-600" />
+                    <span>Barcode: <strong className="font-mono">{product.barcode}</strong></span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -325,6 +447,68 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 </div>
               )}
 
+              {/* In-Use Video & Swatch Photo Gallery */}
+              {(product.demoVideoUrl || (product.mediaGallery && product.mediaGallery.length > 0)) && (
+                <div className="bg-purple-50/50 border border-purple-100 rounded-2xl p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-purple-900 flex items-center gap-1.5">
+                      <Video className="w-4 h-4 text-pink-600" />
+                      <span>In-Use Demonstration & Photo Gallery</span>
+                    </span>
+                    {productTutorials.length > 0 && (
+                      <button
+                        onClick={() => setActiveTab('tutorials')}
+                        className="text-xs font-bold text-pink-600 hover:underline"
+                      >
+                        View all {productTutorials.length} tutorials &rarr;
+                      </button>
+                    )}
+                  </div>
+
+                  {product.demoVideoUrl && (
+                    <div className="space-y-1.5">
+                      <p className="text-3xs font-bold text-slate-500 uppercase tracking-wider">Product Demo Clip</p>
+                      <div className="rounded-2xl overflow-hidden bg-slate-950 aspect-video max-h-64 shadow-md border border-purple-200">
+                        <video
+                          src={product.demoVideoUrl}
+                          controls
+                          playsInline
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {product.mediaGallery && product.mediaGallery.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-3xs font-bold text-slate-500 uppercase tracking-wider">
+                        In-Use & Wear Photos ({product.mediaGallery.length})
+                      </p>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                        {product.mediaGallery.map((med) => (
+                          <div
+                            key={med.id}
+                            className="group relative rounded-xl overflow-hidden aspect-square border border-purple-100 bg-slate-100 shadow-2xs"
+                          >
+                            <img
+                              src={med.url}
+                              alt={med.title || 'Product media'}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              referrerPolicy="no-referrer"
+                            />
+                            {med.title && (
+                              <div className="absolute inset-x-0 bottom-0 bg-slate-950/75 p-1.5 text-white text-3xs truncate text-center">
+                                {med.title}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Tags */}
               {product.tags && product.tags.length > 0 && (
                 <div className="flex items-center gap-2 flex-wrap">
@@ -341,6 +525,197 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   ))}
                 </div>
               )}
+            </div>
+          ) : activeTab === 'tutorials' ? (
+            /* Dedicated Tutorials & In-Use Demos Tab */
+            <div className="space-y-5">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-gradient-to-r from-purple-900 to-pink-900 rounded-2xl text-white shadow-md">
+                <div>
+                  <h3 className="text-sm font-bold flex items-center gap-2">
+                    <Film className="w-4 h-4 text-pink-300" />
+                    <span>In-Use Tutorials & Masterclasses</span>
+                  </h3>
+                  <p className="text-2xs text-purple-200 mt-0.5">
+                    Step-by-step application routines, wear tests, and tricks for {product.name}
+                  </p>
+                </div>
+
+                {onCreateTutorialForProduct && (
+                  <button
+                    id="add-tutorial-for-product-btn"
+                    onClick={() => {
+                      onClose();
+                      onCreateTutorialForProduct(product);
+                    }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-xl text-xs font-bold transition-all shrink-0 shadow-xs hover:scale-105"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Share Tutorial</span>
+                  </button>
+                )}
+              </div>
+
+              {productTutorials.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {productTutorials.map((tut) => (
+                    <TutorialCard
+                      key={tut.id}
+                      tutorial={tut}
+                      onOpenTutorial={(t) => {
+                        onClose();
+                        if (onOpenTutorial) onOpenTutorial(t);
+                      }}
+                      onToggleLike={onToggleLikeTutorial || (() => {})}
+                      onToggleSave={onToggleSaveTutorial || (() => {})}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="p-8 text-center bg-purple-50/50 rounded-2xl border border-purple-100 space-y-3">
+                  <div className="w-12 h-12 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center mx-auto">
+                    <Video className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-800">No community tutorials uploaded yet</h4>
+                    <p className="text-2xs text-slate-500 mt-1 max-w-sm mx-auto">
+                      Be the first to create a step-by-step video guide or swatch routine for {product.name}!
+                    </p>
+                  </div>
+                  {onCreateTutorialForProduct && (
+                    <button
+                      onClick={() => {
+                        onClose();
+                        onCreateTutorialForProduct(product);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white text-xs font-bold rounded-xl shadow-xs"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Create Tutorial</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : activeTab === 'durability' ? (
+            /* Dedicated Durability & Store Aisles Tab */
+            <div className="space-y-5">
+              <div className="p-4 bg-gradient-to-br from-pink-50/70 to-purple-50 rounded-2xl border border-pink-100/80 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-pink-600 text-white flex items-center justify-center shadow-sm">
+                    <ShieldCheck className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-purple-950">Durability & Wear Longevity</h3>
+                    <p className="text-2xs text-purple-700">
+                      Expected Lifespan: <strong className="text-slate-900">{durability.expectedLifespan}</strong>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className="text-2xl font-display font-extrabold text-pink-600">
+                    {durability.durabilityScore.toFixed(1)}
+                  </span>
+                  <span className="text-2xs text-slate-400 font-normal"> / 5.0</span>
+                </div>
+              </div>
+
+              {/* Durability Specifications */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="p-3.5 bg-purple-50/60 rounded-xl border border-purple-100">
+                  <p className="text-3xs font-bold uppercase text-purple-900 mb-1">Wear Resistance</p>
+                  <p className="font-bold text-emerald-700">{durability.wearResistance || 'High'} Resistance</p>
+                </div>
+                <div className="p-3.5 bg-purple-50/60 rounded-xl border border-purple-100">
+                  <p className="text-3xs font-bold uppercase text-purple-900 mb-1">Material Composition</p>
+                  <p className="text-slate-800">{durability.materialComposition || 'Engineered high-grade build'}</p>
+                </div>
+              </div>
+
+              {durability.maintenanceTips && (
+                <div className="p-3.5 bg-purple-50/60 rounded-xl border border-purple-100 text-xs">
+                  <p className="text-3xs font-bold uppercase text-purple-900 mb-1">Care & Maintenance Recommendations</p>
+                  <p className="text-slate-700 leading-relaxed">{durability.maintenanceTips}</p>
+                </div>
+              )}
+
+              {/* Physical Store & Aisle Locations */}
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-purple-950 flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-purple-700" />
+                    <span>In-Store Aisles & Retail Locations</span>
+                  </h4>
+                </div>
+
+                {product.storeLocations && product.storeLocations.length > 0 ? (
+                  <div className="space-y-2">
+                    {product.storeLocations.map((loc, idx) => (
+                      <div 
+                        key={idx}
+                        className="p-3 bg-white border border-purple-100 rounded-xl shadow-2xs flex items-center justify-between gap-3 text-xs"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <Store className="w-3.5 h-3.5 text-purple-600" />
+                            <span className="font-bold text-slate-900">{loc.storeName}</span>
+                            <span className="text-3xs font-semibold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                              {loc.stockStatus}
+                            </span>
+                          </div>
+                          <p className="text-2xs text-slate-600 mt-1">
+                            <span className="font-bold text-purple-900">{loc.aisle}</span> • {loc.department} {loc.bayOrSection ? `(${loc.bayOrSection})` : ''}
+                          </p>
+                        </div>
+
+                        {loc.localFinderUrl && (
+                          <a
+                            href={loc.localFinderUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-900 text-2xs font-bold flex items-center gap-1 transition-colors shrink-0"
+                          >
+                            <span>Find Store</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 bg-purple-50/50 rounded-xl border border-purple-100 text-center text-xs text-slate-500">
+                    <p>No physical aisle records stored yet. Edit this item to add store locations or scan its barcode.</p>
+                  </div>
+                )}
+              </div>
+
+              {onOpenShareDurability && (
+                <button
+                  onClick={() => onOpenShareDurability(product)}
+                  className="w-full py-3 rounded-2xl bg-gradient-to-r from-violet-600 to-pink-600 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md hover:scale-[1.01] transition-transform"
+                >
+                  <Share2 className="w-4 h-4" />
+                  <span>Generate Shareable Durability Report Card</span>
+                </button>
+              )}
+            </div>
+          ) : activeTab === 'retailers' ? (
+            /* Dedicated Retailer Links Tab */
+            <div className="space-y-4">
+              <RetailerLinksSection
+                productName={product.name}
+                brand={product.brand}
+                category={product.category}
+                price={product.price}
+                sourceUrl={product.sourceUrl}
+                primaryRetailer={product.primaryRetailer}
+                retailers={product.retailers}
+                onAddRetailerLink={(link) => {
+                  if (onAddRetailerLink) {
+                    onAddRetailerLink(product.id, link);
+                  }
+                }}
+              />
             </div>
           ) : (
             /* Historical Price Chart View */

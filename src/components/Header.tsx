@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Plus, Search, Scale, History, Sliders, Heart, Layers, Compass } from 'lucide-react';
+import { Sparkles, Plus, Search, Scale, History, Sliders, Heart, Layers, Compass, Barcode, Camera, Film, Video } from 'lucide-react';
 import { AppTab } from '../types';
 
 interface HeaderProps {
@@ -8,12 +8,14 @@ interface HeaderProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onOpenAddModal: () => void;
+  onOpenBarcodeScanner?: () => void;
   compareCount: number;
   onOpenCompare: () => void;
   totalProducts: number;
   onOpenTasteProfile: () => void;
   onOpenBrowsingHistory: () => void;
   historyCount: number;
+  tutorialsCount?: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -22,12 +24,14 @@ export const Header: React.FC<HeaderProps> = ({
   searchQuery,
   onSearchChange,
   onOpenAddModal,
+  onOpenBarcodeScanner,
   compareCount,
   onOpenCompare,
   totalProducts,
   onOpenTasteProfile,
   onOpenBrowsingHistory,
-  historyCount
+  historyCount,
+  tutorialsCount = 0
 }) => {
   return (
     <header className="bg-[#180A28] text-white border-b border-purple-900/50 sticky top-0 z-30 shadow-md">
@@ -108,6 +112,20 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <Scale className="w-4 h-4 text-pink-400" />
                 <span>Compare ({compareCount})</span>
+              </button>
+            )}
+
+            {/* Scan Barcode / Camera Button */}
+            {onOpenBarcodeScanner && (
+              <button
+                id="header-barcode-scan-btn"
+                onClick={onOpenBarcodeScanner}
+                className="flex items-center gap-1.5 px-3 sm:px-3.5 py-2 text-xs font-bold bg-purple-900/90 hover:bg-purple-800 text-pink-300 border border-pink-500/40 hover:border-pink-400 rounded-xl shadow-xs transition-all hover:scale-[1.02]"
+                title="Scan Physical Product Barcode"
+              >
+                <Barcode className="w-4 h-4 text-pink-400" />
+                <span className="hidden sm:inline">Scan Barcode</span>
+                <span className="sm:hidden">Scan</span>
               </button>
             )}
 

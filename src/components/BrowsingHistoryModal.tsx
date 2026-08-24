@@ -134,6 +134,19 @@ export const BrowsingHistoryModal: React.FC<BrowsingHistoryModalProps> = ({
                       <p className="text-2xs text-slate-500">
                         {item.brand} • ${item.price} • Viewed {item.viewCount}x
                       </p>
+                      {item.sourceUrl && (
+                        <a
+                          href={item.sourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1 text-3xs text-purple-700 hover:text-purple-950 font-mono mt-0.5"
+                          title={item.sourceUrl}
+                        >
+                          <ExternalLink className="w-2.5 h-2.5" />
+                          <span className="truncate max-w-[200px]">{item.sourceUrl}</span>
+                        </a>
+                      )}
                     </div>
                   </div>
 

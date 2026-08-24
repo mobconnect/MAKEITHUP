@@ -1,6 +1,7 @@
 import React from 'react';
 import { ProductItem } from '../types';
 import { CATEGORY_METRIC_LABELS } from '../data/initialProducts';
+import { extractDomainFromUrl, MAJOR_RETAILERS } from '../utils/retailerData';
 import { 
   Star, 
   RotateCcw, 
@@ -8,11 +9,16 @@ import {
   X, 
   Heart, 
   Plus, 
-  SlidersHorizontal,
-  ChevronRight,
-  TrendingDown,
-  TrendingUp,
-  Sparkles
+  SlidersHorizontal, 
+  ChevronRight, 
+  TrendingDown, 
+  TrendingUp, 
+  Sparkles, 
+  Store, 
+  ExternalLink,
+  ShieldCheck,
+  Barcode,
+  Share2
 } from 'lucide-react';
 
 interface ProductCardProps {
@@ -23,6 +29,7 @@ interface ProductCardProps {
   onToggleFavorite: (id: string) => void;
   isCompared: boolean;
   onToggleCompare: (product: ProductItem) => void;
+  onShareDurability?: (product: ProductItem) => void;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
@@ -32,9 +39,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onEditProduct,
   onToggleFavorite,
   isCompared,
-  onToggleCompare
+  onToggleCompare,
+  onShareDurability
 }) => {
   const categoryLabels = CATEGORY_METRIC_LABELS[product.category] || CATEGORY_METRIC_LABELS.homewares;
+
+  const retailerInfo = product.primaryRetailer && MAJOR_RETAILERS[product.primaryRetailer as keyof typeof MAJOR_RETAILERS];
+  const domain = product.sourceUrl ? extractDomainFromUrl(product.sourceUrl) : retailerInfo?.domain;
 
   const priceTrend = React.useMemo(() => {
     if (!product.priceHistory || product.priceHistory.length < 2) return null;
@@ -161,6 +172,32 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 </span>
               )}
               {renderRepurchaseBadge(product.repurchase)}
+              {product.barcode && (
+                <span className="inline-flex items-center gap-1 text-3xs font-mono px-2 py-0.5 rounded-md bg-purple-50 text-purple-800 border border-purple-200">
+                  <Barcode className="w-2.5 h-2.5 text-purple-600" />
+                  <span>{product.barcode}</span>
+                </span>
+              )}
+              {product.durabilityProfile && (
+                <span className="inline-flex items-center gap-1 text-3xs font-bold px-2 py-0.5 rounded-md bg-pink-50 text-pink-700 border border-pink-200">
+                  <ShieldCheck className="w-2.5 h-2.5 text-pink-600" />
+                  <span>Durability {product.durabilityProfile.durabilityScore.toFixed(1)}</span>
+                </span>
+              )}
+              {product.sourceUrl && (
+                <a
+                  href={product.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center gap-1 text-3xs font-semibold px-2 py-0.5 rounded-md bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 transition-colors"
+                  title={`Viewed on ${domain}`}
+                >
+                  <Store className="w-2.5 h-2.5 text-purple-600" />
+                  <span>{retailerInfo ? retailerInfo.shortName : domain}</span>
+                  <ExternalLink className="w-2 h-2 text-purple-400" />
+                </a>
+              )}
             </div>
 
             <h3 
@@ -193,6 +230,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
           {/* Action buttons */}
           <div className="flex items-center gap-2">
+            {onShareDurability && (
+              <button
+                id={`share-durability-list-${product.id}`}
+                onClick={() => onShareDurability(product)}
+                className="p-2 rounded-xl border border-pink-200 bg-pink-50 hover:bg-pink-100 text-pink-700 transition-colors"
+                title="Share Durability Report"
+              >
+                <Share2 className="w-4 h-4" />
+              </button>
+            )}
+
             <button
               id={`fav-btn-list-${product.id}`}
               onClick={() => onToggleFavorite(product.id)}
@@ -253,9 +301,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
           {/* Top Badges */}
           <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-            <span className="text-2xs font-bold uppercase tracking-wider bg-white/95 backdrop-blur-md text-purple-950 px-2.5 py-1 rounded-full shadow-2xs">
-              {product.category}
-            </span>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-2xs font-bold uppercase tracking-wider bg-white/95 backdrop-blur-md text-purple-950 px-2.5 py-1 rounded-full shadow-2xs">
+                {product.category}
+              </span>
+              {retailerInfo && (
+                <span className={`text-3xs font-bold px-2 py-0.5 rounded-full shadow-2xs ${retailerInfo.badgeBg} ${retailerInfo.badgeText}`}>
+                  {retailerInfo.shortName}
+                </span>
+              )}
+            </div>
 
             <div className="flex items-center gap-1.5">
               <button
@@ -322,8 +377,22 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         <div className="p-5 flex-1 flex flex-col justify-between">
           <div>
             {/* Repurchase Badge & Subcategory */}
-            <div className="flex items-center justify-between gap-2 mb-2">
-              {renderRepurchaseBadge(product.repurchase)}
+            <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {renderRepurchaseBadge(product.repurchase)}
+                {product.barcode && (
+                  <span className="inline-flex items-center gap-0.5 text-3xs font-mono px-1.5 py-0.5 rounded bg-purple-50 text-purple-800 border border-purple-200">
+                    <Barcode className="w-2.5 h-2.5 text-purple-600" />
+                    <span>{product.barcode}</span>
+                  </span>
+                )}
+                {product.durabilityProfile && (
+                  <span className="inline-flex items-center gap-0.5 text-3xs font-bold px-1.5 py-0.5 rounded bg-pink-50 text-pink-700 border border-pink-200">
+                    <ShieldCheck className="w-2.5 h-2.5 text-pink-600" />
+                    <span>Durability {product.durabilityProfile.durabilityScore.toFixed(1)}</span>
+                  </span>
+                )}
+              </div>
               <span className="text-2xs text-purple-700 font-medium truncate">
                 {product.usageDuration}
               </span>
@@ -336,6 +405,24 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             >
               {product.name}
             </h3>
+
+            {/* Store Source Link Indicator */}
+            {product.sourceUrl && (
+              <div className="mb-2.5">
+                <a
+                  href={product.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center gap-1.5 text-3xs font-medium text-slate-600 hover:text-purple-900 bg-purple-50/80 hover:bg-purple-100 px-2 py-0.5 rounded-lg border border-purple-100 transition-colors truncate max-w-full"
+                  title={product.sourceUrl}
+                >
+                  <Store className="w-3 h-3 text-purple-600 shrink-0" />
+                  <span className="truncate font-mono">{domain}</span>
+                  <ExternalLink className="w-2.5 h-2.5 text-purple-400 shrink-0" />
+                </a>
+              </div>
+            )}
 
             {/* Written review excerpt */}
             <p className="text-xs text-slate-600 line-clamp-2 mb-3.5">
@@ -393,6 +480,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         </button>
 
         <div className="flex items-center gap-1.5">
+          {onShareDurability && (
+            <button
+              id={`share-durability-grid-${product.id}`}
+              onClick={() => onShareDurability(product)}
+              className="p-1.5 rounded-xl border border-pink-200 bg-pink-50 hover:bg-pink-100 text-pink-700 transition-colors"
+              title="Share Durability Report"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+            </button>
+          )}
           <button
             id={`edit-rating-btn-${product.id}`}
             onClick={() => onEditProduct(product)}

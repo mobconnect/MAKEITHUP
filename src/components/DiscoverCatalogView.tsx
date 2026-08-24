@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ProductCategory, ProductItem } from '../types';
 import { DISCOVER_CATALOG, CatalogItem } from '../data/discoverCatalog';
+import { extractDomainFromUrl, MAJOR_RETAILERS } from '../utils/retailerData';
 import { 
   Search, 
   Sparkles, 
@@ -9,7 +10,9 @@ import {
   Eye, 
   Tag, 
   SlidersHorizontal,
-  CheckCircle2
+  CheckCircle2,
+  Store,
+  ExternalLink
 } from 'lucide-react';
 
 interface DiscoverCatalogViewProps {
@@ -167,9 +170,16 @@ export const DiscoverCatalogView: React.FC<DiscoverCatalogViewProps> = ({
                   <div className="absolute inset-0 bg-gradient-to-t from-purple-950/70 via-transparent to-black/20" />
 
                   <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-                    <span className="text-2xs font-bold uppercase tracking-wider bg-white/95 text-purple-950 px-2 py-0.5 rounded-md">
-                      {item.category}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-2xs font-bold uppercase tracking-wider bg-white/95 text-purple-950 px-2 py-0.5 rounded-md">
+                        {item.category}
+                      </span>
+                      {item.primaryRetailer && MAJOR_RETAILERS[item.primaryRetailer as keyof typeof MAJOR_RETAILERS] && (
+                        <span className={`text-3xs font-bold px-2 py-0.5 rounded-full shadow-2xs ${MAJOR_RETAILERS[item.primaryRetailer as keyof typeof MAJOR_RETAILERS].badgeBg} ${MAJOR_RETAILERS[item.primaryRetailer as keyof typeof MAJOR_RETAILERS].badgeText}`}>
+                          {MAJOR_RETAILERS[item.primaryRetailer as keyof typeof MAJOR_RETAILERS].shortName}
+                        </span>
+                      )}
+                    </div>
 
                     {isAlreadyRated ? (
                       <span className="bg-emerald-500 text-white text-2xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -203,6 +213,23 @@ export const DiscoverCatalogView: React.FC<DiscoverCatalogViewProps> = ({
                   >
                     {item.name}
                   </h3>
+
+                  {/* Store Link */}
+                  {item.sourceUrl && (
+                    <a
+                      href={item.sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-1 text-3xs font-medium text-purple-700 hover:text-purple-950 bg-purple-50 hover:bg-purple-100 px-2 py-0.5 rounded border border-purple-100 transition-colors truncate max-w-full font-mono"
+                      title={item.sourceUrl}
+                    >
+                      <Store className="w-3 h-3 text-purple-600 shrink-0" />
+                      <span className="truncate">{extractDomainFromUrl(item.sourceUrl)}</span>
+                      <ExternalLink className="w-2.5 h-2.5 text-purple-400 shrink-0" />
+                    </a>
+                  )}
+
                   <p className="text-xs text-slate-600 line-clamp-2">
                     {item.description}
                   </p>

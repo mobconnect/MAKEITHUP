@@ -7,7 +7,8 @@ import {
   BrowsingHistoryItem, 
   AppTab, 
   RecommendedProduct,
-  PricePoint
+  PricePoint,
+  BarcodeScannedProduct
 } from './types';
 import { INITIAL_PRODUCTS } from './data/initialProducts';
 import { CatalogItem } from './data/discoverCatalog';
@@ -26,6 +27,8 @@ import { TasteProfileModal } from './components/TasteProfileModal';
 import { BrowsingHistoryModal } from './components/BrowsingHistoryModal';
 import { RecommendationsView } from './components/RecommendationsView';
 import { DiscoverCatalogView } from './components/DiscoverCatalogView';
+import { BarcodeScannerModal } from './components/BarcodeScannerModal';
+import { ShareDurabilityModal } from './components/ShareDurabilityModal';
 
 import { 
   Sparkles, 
@@ -36,7 +39,8 @@ import {
   Scale, 
   History,
   Heart,
-  RotateCcw
+  RotateCcw,
+  Barcode
 } from 'lucide-react';
 
 const STORAGE_KEY_PRODUCTS = 'makeithup_products_v2';
@@ -169,6 +173,8 @@ export default function App() {
   const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
   const [isTasteProfileModalOpen, setIsTasteProfileModalOpen] = useState(false);
   const [isBrowsingHistoryModalOpen, setIsBrowsingHistoryModalOpen] = useState(false);
+  const [isBarcodeScannerOpen, setIsBarcodeScannerOpen] = useState(false);
+  const [shareDurabilityProduct, setShareDurabilityProduct] = useState<ProductItem | null>(null);
 
   // 6. Recommendation Engine Output
   const recommendations = useMemo(() => {
@@ -498,6 +504,38 @@ export default function App() {
     setIsAddEditModalOpen(true);
   };
 
+  const handleOpenShareDurability = (product: ProductItem) => {
+    setShareDurabilityProduct(product);
+  };
+
+  const handleSelectProductForRating = (scannedProduct: BarcodeScannedProduct) => {
+    // If it already matches a product on shelf, view it in details modal
+    const existing = products.find(
+      (p) => (p.barcode && p.barcode === scannedProduct.barcode) || p.name.toLowerCase() === scannedProduct.name.toLowerCase()
+    );
+
+    if (existing) {
+      setDetailProduct(existing);
+    } else {
+      // Pre-fill rating modal with scanned barcode info
+      setInitialPrefill({
+        name: scannedProduct.name,
+        brand: scannedProduct.brand,
+        category: scannedProduct.category,
+        subCategory: scannedProduct.subCategory,
+        price: scannedProduct.price,
+        imageUrl: scannedProduct.imageUrl,
+        barcode: scannedProduct.barcode,
+        durabilityProfile: scannedProduct.durabilityProfile,
+        storeLocations: scannedProduct.storeLocations,
+        primaryRetailer: scannedProduct.primaryRetailer,
+        sourceUrl: scannedProduct.sourceUrl
+      });
+      setEditingProduct(null);
+      setIsAddEditModalOpen(true);
+    }
+  };
+
   const handleClearBrowsingHistory = () => {
     setBrowsingHistory([]);
   };
@@ -583,6 +621,7 @@ export default function App() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onOpenAddModal={handleOpenAddModal}
+        onOpenBarcodeScanner={() => setIsBarcodeScannerOpen(true)}
         compareCount={compareList.length}
         onOpenCompare={() => setIsCompareModalOpen(true)}
         totalProducts={products.length}
@@ -690,6 +729,7 @@ export default function App() {
                     onToggleFavorite={handleToggleFavorite}
                     isCompared={compareList.some((p) => p.id === product.id)}
                     onToggleCompare={handleToggleCompare}
+                    onShareDurability={handleOpenShareDurability}
                   />
                 ))}
               </div>
@@ -705,6 +745,7 @@ export default function App() {
                     onToggleFavorite={handleToggleFavorite}
                     isCompared={compareList.some((p) => p.id === product.id)}
                     onToggleCompare={handleToggleCompare}
+                    onShareDurability={handleOpenShareDurability}
                   />
                 ))}
               </div>
@@ -863,6 +904,7 @@ export default function App() {
         onUpdateScore={handleUpdateScore}
         onAddPricePoint={handleAddPricePoint}
         onDeletePricePoint={handleDeletePricePoint}
+        onShareDurability={handleOpenShareDurability}
       />
 
       <AddEditProductModal
@@ -902,6 +944,19 @@ export default function App() {
           if (item) setDetailProduct(item);
         }}
         onExploreRecommendations={() => setCurrentTab('for_you')}
+      />
+
+      <BarcodeScannerModal
+        isOpen={isBarcodeScannerOpen}
+        onClose={() => setIsBarcodeScannerOpen(false)}
+        onSelectProductForRating={handleSelectProductForRating}
+        existingProducts={products}
+      />
+
+      <ShareDurabilityModal
+        isOpen={!!shareDurabilityProduct}
+        onClose={() => setShareDurabilityProduct(null)}
+        product={shareDurabilityProduct}
       />
 
     </div>

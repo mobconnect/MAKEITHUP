@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { RecommendedProduct, TasteProfile, ProductCategory, ProductItem } from '../types';
+import { extractDomainFromUrl, MAJOR_RETAILERS } from '../utils/retailerData';
 import { 
   Sparkles, 
   Star, 
@@ -14,7 +15,9 @@ import {
   Tag,
   ArrowRight,
   Filter,
-  Check
+  Check,
+  Store,
+  ExternalLink
 } from 'lucide-react';
 
 interface RecommendationsViewProps {
@@ -245,9 +248,16 @@ export const RecommendationsView: React.FC<RecommendationsViewProps> = ({
 
                     {/* Top Badges */}
                     <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-                      <span className="text-2xs font-bold uppercase tracking-wider bg-white/95 backdrop-blur-md text-purple-950 px-2.5 py-1 rounded-full shadow-xs">
-                        {item.category} • {item.subCategory}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-2xs font-bold uppercase tracking-wider bg-white/95 backdrop-blur-md text-purple-950 px-2.5 py-1 rounded-full shadow-xs">
+                          {item.category} • {item.subCategory}
+                        </span>
+                        {item.primaryRetailer && MAJOR_RETAILERS[item.primaryRetailer as keyof typeof MAJOR_RETAILERS] && (
+                          <span className={`text-3xs font-bold px-2 py-0.5 rounded-full shadow-2xs ${MAJOR_RETAILERS[item.primaryRetailer as keyof typeof MAJOR_RETAILERS].badgeBg} ${MAJOR_RETAILERS[item.primaryRetailer as keyof typeof MAJOR_RETAILERS].badgeText}`}>
+                            {MAJOR_RETAILERS[item.primaryRetailer as keyof typeof MAJOR_RETAILERS].shortName}
+                          </span>
+                        )}
+                      </div>
 
                       {/* Match Score Badge */}
                       <div className="bg-gradient-to-r from-violet-600 to-pink-600 text-white text-xs font-extrabold px-3 py-1 rounded-full shadow-md flex items-center gap-1">
@@ -302,6 +312,25 @@ export const RecommendationsView: React.FC<RecommendationsViewProps> = ({
                       >
                         {item.name}
                       </h3>
+
+                      {/* Store Source Link */}
+                      {item.sourceUrl && (
+                        <div className="mt-1">
+                          <a
+                            href={item.sourceUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center gap-1 text-3xs font-medium text-purple-700 hover:text-purple-950 bg-purple-50 hover:bg-purple-100 px-2 py-0.5 rounded border border-purple-100 transition-colors truncate max-w-full font-mono"
+                            title={item.sourceUrl}
+                          >
+                            <Store className="w-3 h-3 text-purple-600 shrink-0" />
+                            <span className="truncate">{extractDomainFromUrl(item.sourceUrl)}</span>
+                            <ExternalLink className="w-2.5 h-2.5 text-purple-400 shrink-0" />
+                          </a>
+                        </div>
+                      )}
+
                       <p className="text-xs text-slate-600 line-clamp-2 mt-1">
                         {item.description}
                       </p>
