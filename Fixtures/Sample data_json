@@ -1,0 +1,10 @@
+{
+  "users": [
+    { "id": 1, "name": "Alice", "email": "alice@example.com" },
+    { "id": 2, "name": "Bob", "email": "bob@example.com" }
+  ],
+  "files": [
+    { "id": "f1", "owner": 1, "name": "document.pdf", "size": 234567 },
+    { "id": "f2", "owner": 2, "name": "photo.jpg", "size": 123456 }
+  ]
+}
